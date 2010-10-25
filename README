@@ -1,0 +1,11 @@
+Tugrik - ORM for PHP and MongoDB
+================================
+
+Tugrik is an abstraction layer fpr MongoDB written in PHP.
+
+It will allow you to store PHP objects directly in a MongoDB database
+wothout converting them to an array. It will handle relations between 
+objects.
+
+* Requires PHP 5.3+
+* Pre-alpha state - use at your own risk.
