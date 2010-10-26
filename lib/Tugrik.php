@@ -230,7 +230,22 @@ class Tugrik
             return false;
         }
         
-        $this->_db->$cls->remove(array('_oid' => $_oid));
+        try {
+            $result = $this->_db->$cls->remove(
+                array('_oid' => $_oid),
+                array('justOne' => true, 'safe' => true)
+            );
+        } catch (MongoCursorException $e) {
+            return false;
+        }
+        
+        unset($this->_objects[$_oid]);
+        if (is_object($arg)) {
+            unset($arg->_oid);
+            unset($arg->_hash);
+        }
+
+        return true;
     }
 
     public function _reflect($var, array &$doc=array(), $path='', $poid='')
