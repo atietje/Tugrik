@@ -3,9 +3,9 @@
  * Tugrik
  *
  * Some ORM-style MongoDB database abstraction layer for PHP
- * 
+ *
  * As of now, this one is in an unstable experimental pre-alpha state.
- * Take a look, but do not use, even at your own risk. 
+ * Take a look, but do not use, even at your own risk.
  * Everything is subject to change.
  *
  * - Classnames are treated case-sensitive.
@@ -57,7 +57,7 @@ class Tugrik
      * @var object
      */
     private $_db = null;
-    
+
     /**
      * Keeps track of recursions
      *
@@ -67,7 +67,7 @@ class Tugrik
 
     /**
      * Keeps track of objects
-     * 
+     *
      * @todo Check if thos should become an SplObjectStorage
      * @var array
      **/
@@ -75,10 +75,10 @@ class Tugrik
 
     /**
      * Constructor
-     * 
+     *
      * Making the constructor private makes it impossible
      * to circumvent Tugrik::setup() and Tugrik::singleton()
-     * to 
+     * to
      *
      * @author Axel Tietje
      */
@@ -90,28 +90,41 @@ class Tugrik
             throw new Exception('Call Tugrik::setup() to set database and dsn');
             return;
         }
-        
+
         try {
             $this->_mongo = new Mongo(self::$_dsn);
         } catch (MongoConnectionException $e) {
             throw $e;
             return;
         }
-        
+
         $this->_db = $this->_mongo->{self::$_database};
     }
 
     /**
      * Configure Tugrik
      *
+     * Database names can use almost any character in the ASCII range.
+     * However, they cannot contain " ", "." or be the empty string.
+     * The name "system" is also reserved.
+     *
      * @return boolean
      * @author Axel Tietje
-     * @todo Sanitize $database
      * @param string $database Name of the database to be used
      * @param string $dsn The Data Source Name, or DSN, contains the information required to connect to the database.
+     * @throws Exception
      **/
     public static function setup($database, $dsn='mongodb://localhost:27017')
     {
+        if (false === is_string($database) ||
+            '' === $database ||
+            'system' === $database ||
+            false !== strpos($database, '.') ||
+            false !== strpos($database, ' ')
+        ) {
+            throw new Exception("Invalid database name '{$database}'");
+            return false;
+        }
         self::$_database = $database;
         self::$_dsn = $dsn;
         return true;
@@ -123,7 +136,7 @@ class Tugrik
      * @return object
      * @author Axel Tietje
      */
-    public static function singleton() 
+    public static function singleton()
     {
         if (!isset(self::$_instance)) {
             $class = __CLASS__;
@@ -131,7 +144,7 @@ class Tugrik
         }
         return self::$_instance;
     }
-    
+
     /**
      * Prevent users to clone the instance
      *
@@ -166,9 +179,9 @@ class Tugrik
 
         return $rv;
     }
-    
+
     /**
-     * Fetch a previously stored PHP object 
+     * Fetch a previously stored PHP object
      *
      * @param mixed $arg Object-ID or array with a key '_oid'
      * @return object Rebuilt object or false on error
@@ -222,14 +235,14 @@ class Tugrik
             throw new InvalidArgumentException('Tugrik::drop() only accepts strings or stored objects');
             return false;
         }
-        
+
         list($cls, $oid) = explode('::', $_oid);
-        
+
         if (in_array($cls, $this->_db->listCollections(), true)) {
             throw new Exception("Collection '$cls' does not exist.");
             return false;
         }
-        
+
         try {
             $result = $this->_db->$cls->remove(
                 array('_oid' => $_oid),
@@ -238,7 +251,7 @@ class Tugrik
         } catch (MongoCursorException $e) {
             return false;
         }
-        
+
         unset($this->_objects[$_oid]);
         if (is_object($arg)) {
             unset($arg->_oid);
@@ -280,7 +293,7 @@ class Tugrik
                     ) {
                         // The object has been altered by some other
                         // process in the time between fetch() and store()
-                        // What should be done? 
+                        // What should be done?
                         // Overwrite? Throw an Exception?
                         throw new UnexpectedValueException(
                             "Object hash altered from {$var->_hash} to {$storedHash}"
@@ -293,14 +306,14 @@ class Tugrik
                 $newOid = $cls . '::' . $this->_newOid();
                 $var->_oid = $newOid;
             }
-            
+
             // Keep track of recursions
             if (isset($this->_recursions[$var->_oid])) {
                 return $var->_oid;
             }
-            
+
             $this->_recursions[$var->_oid] = true;
-            
+
             // object reflection
             $ref = new ReflectionClass($cls);
             foreach ($ref->getProperties() as $prop) {
@@ -392,7 +405,7 @@ class Tugrik
             return $var;
         }
     }
-    
+
     private function _rebuild(array $doc)
     {
         if (isset($doc['_oid'])) {
@@ -431,7 +444,7 @@ class Tugrik
             }
             return $obj;
         } else {
-            // TODO: check what we might have to do here… 
+            // TODO: check what we might have to do here…
             // could there ever be an “else”?
             return $doc;
         }
@@ -471,7 +484,7 @@ class Tugrik
     }
 
     // Temporary accessors for debugging purposes, will possibly vanish
-    
+
     function db()
     {
         return $this->_db;
